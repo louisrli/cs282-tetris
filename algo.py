@@ -5,25 +5,9 @@ import copy
 import sys
 from time import sleep
 import string
-import math
-
-"""
-Tetrais - Tetris AI
-
-By Saagar Deshpande, Louis Li, Brandon Sim
-
-Tetris game logic based on code from:
-https://github.com/adhit/tetris
-
-Basic game functionalities:
-    - Board is represented by a two dimensional matrix, `grid`
-    - A state is represented by a dict with keys "board" and "pieces", 
-      where "pieces" is the remaining pieces (thus piece[0] is the next piece)
-    - print_grid for a beautiful ASCII representation of your configuration
-"""
 
 debug = False
-demo = False
+demo = True
 TESTMODE = True
 
 GRID_HEIGHT = 20
@@ -283,24 +267,6 @@ class TetrisSearchProblem(search.SearchProblem):
     def getCostOfActions(self, actions):
         pass
 
-def find_tetris(problem):
-    """
-    Continues until we find a tetris
-    """
-    current_node = None
-
-    # Game loop: keep playing the game until all of the pieces are done
-    while current_node is None or len(current_node["pieces"]) > 0:
-        game_replay, goal_node = search.aStarSearch(problem, heuristic=evaluate_state)
-        current_node = goal_node
-
-        for grid in game_replay:
-            print_grid(grid)
-            print
-
-            sleep(1)
-        return # TODO: remove once we have a real goal state
-
 def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=False, verbose=False):
     """
     Test harness
@@ -386,11 +352,6 @@ def main():
         printHelp()
         return
 
-    # DEMO
-    # if len(sys.argv) == 2 and (sys.argv[1] == "-d" or sys.argv[1] == "--demo"):
-    #     search_problem = TetrisSearchProblem(lookahead=1)
-    #     find_tetris(search_problem)
-
     # HELP
     if len(sys.argv) == 2 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
         printHelp()
@@ -405,14 +366,6 @@ def main():
         test_tetris(ntrial=int(sys.argv[2]), lookahead=int(sys.argv[3]), watchGames=int(sys.argv[4]), verbose=int(sys.argv[5]))
 
 
-    # search_problem = TetrisSearchProblem(lookahead=1)
-    # if TESTMODE:
-    #     test_tetris(1, watchGames=True)
-    # else:
-    #     find_tetris(search_problem)
-
-
 if __name__ == '__main__':
     main()
-    #watchReplay('gameLogs/trial_23_linesCleared=5.txt')
 

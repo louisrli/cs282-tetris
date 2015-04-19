@@ -6,15 +6,6 @@
 # John DeNero (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # For more info, see http://inst.eecs.berkeley.edu/~cs188/sp09/pacman.html
 
-"""
-Tetrais - Tetris AI
-
-By Saagar Deshpande, Louis Li, Brandon Sim
-Code based on CS182 Problem Set 1 
-https://bitbucket.org/louisrli/cs182
-
-"""
-
 import util
 import copy
 import tetris
