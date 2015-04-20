@@ -168,7 +168,7 @@ class TetrisSearchProblem(search.SearchProblem):
         return { "pieces": self.all_pieces, "board": self.initial_board }
 
     def isGoalState(self, state):
-        # SHould be a goal state when there are no pieces left
+        # Should be a goal state when there are no pieces left
         return len(state["pieces"]) == 0
 
     def _generateRotations(self, piece, grid):
@@ -204,6 +204,20 @@ class TetrisSearchProblem(search.SearchProblem):
 
         return rotated_pieces
 
+
+    def getReward(self, state, action):
+        """
+        Returns the empirical reward for a state and action
+
+        Args:
+            state: the current state
+            action: a piece (and maybe an x-coordinate)?
+
+        Returns: a numeric value
+        
+        TODO
+        """
+        pass
 
     def getSuccessors(self, state):
         """

@@ -92,6 +92,7 @@ def parameterizedSearch(problem, FrontierDataStructure, priorityFunction=None, h
   else:
     frontier = FrontierDataStructure()
 
+  immediate_rewards = []
   visited = []
   node = problem.getStartState()
   frontier.push((node, []))
@@ -101,8 +102,6 @@ def parameterizedSearch(problem, FrontierDataStructure, priorityFunction=None, h
 
   while not frontier.isEmpty():
     node, actionHistory = frontier.pop()
-
-    print node["pieces"]
     if problem.isGoalState(node):
         print "HERE"
         return (actionHistory + [node["board"]], node)
@@ -114,7 +113,6 @@ def parameterizedSearch(problem, FrontierDataStructure, priorityFunction=None, h
       print "Game Over"
       return (actionHistory + [node["board"]], node)
 
-
     # generates real successors, with lines cleared
     immediate_successors = []
     for s in successors:
@@ -125,6 +123,9 @@ def parameterizedSearch(problem, FrontierDataStructure, priorityFunction=None, h
         "pieces": s["pieces"]
       })
 
+    # TODO(max)
+    # Using immediate_successors, we need to use q-learning to figure out
+    # the best successor to go to
 
     # Evaluated successors may not be the immediate successors
     # if the lookahead is more than 1
@@ -189,6 +190,10 @@ def parameterizedSearch(problem, FrontierDataStructure, priorityFunction=None, h
       newActionList = [old_action] + [action]
 
     new_history = actionHistory + newActionList
+
+    # TODO(max): nothing to do here, but just note that this is us recording
+    # the immediate reward (and it probably needs to be used again in the q-learning algorithm)
+    immediate_rewards.append(problem.getReward(node, action))
 
     if problem.verbose:
       if len(new_history) >= 2:
