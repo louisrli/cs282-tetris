@@ -168,9 +168,8 @@ class TetrisSearchProblem(search.SearchProblem):
         return { "pieces": self.all_pieces, "board": self.initial_board }
 
     def isGoalState(self, state):
-        # TODO: Define this -- depends on what approach we want to take
-        # Is it just if the state is ready to tetris and the next piece is a line piece?
-        return len(state["pieces"]) == 5
+        # SHould be a goal state when there are no pieces left
+        return len(state["pieces"]) == 0
 
     def _generateRotations(self, piece, grid):
         """
@@ -223,8 +222,6 @@ class TetrisSearchProblem(search.SearchProblem):
 
         # Because we're leveraging tetris.py, we have a lot of 
         # side-effecting code going on -- have to be careful
-
-
         possible_rotations = self._generateRotations(new_piece, grid)
 
         # Starting from the left-hand side this moves the 
@@ -247,9 +244,10 @@ class TetrisSearchProblem(search.SearchProblem):
                 try:
                     merge_grid_block(grid_copy, piece_copy)
 
+                    # UNCOMMENT FOR AN INFINITE GAME
                     #  push a new random piece to replace the one we played
-                    piece = random.choice(tetris.SHAPES)
-                    state["pieces"].append(piece)
+                    # piece = random.choice(tetris.SHAPES)
+                    # state["pieces"].append(piece)
 
                     successors.append({
                         "board": grid_copy,
@@ -294,6 +292,7 @@ def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=Fal
         
         # Game loop: keep playing the game until all of the pieces are done
         while current_node is None or len(current_node["pieces"]) > 0:
+            print current_node
             game_replay, goal_node = search.aStarSearch(problem, heuristic)
             current_node = goal_node
 

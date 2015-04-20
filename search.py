@@ -102,11 +102,10 @@ def parameterizedSearch(problem, FrontierDataStructure, priorityFunction=None, h
   while not frontier.isEmpty():
     node, actionHistory = frontier.pop()
 
-    # this is bad
-    #if problem.isGoalState(node):
-    #  print "HERE"
-    #  return (actionHistory + [node["board"]], node)
-
+    print node["pieces"]
+    if problem.isGoalState(node):
+        print "HERE"
+        return (actionHistory + [node["board"]], node)
     
     successors = problem.getSuccessors(node)
 
