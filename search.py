@@ -10,7 +10,7 @@ import util
 import copy
 import tetris
 
-class SearchProblem:
+class LearningProblem:
   """
   This class outlines the structure of a search problem, but doesn't implement
   any of the methods (in object-oriented terminology: an abstract class).
@@ -70,7 +70,7 @@ def check_progress(state1, state2):
     lines_cleared += before - after
   return lines_cleared
 
-def parameterizedSearch(problem, FrontierDataStructure, priorityFunction=None, heuristic=None):
+def QLearning(problem):
   """
   Parameterized, generalized search problem
 
@@ -84,13 +84,6 @@ def parameterizedSearch(problem, FrontierDataStructure, priorityFunction=None, h
   """
   # TODO make sure the changes we made were correct...
   # x[0] is the current state
-  if heuristic:
-    priorityFunction = lambda x: heuristic(x[0], problem)
-
-  if priorityFunction:
-    frontier = FrontierDataStructure(priorityFunction)
-  else:
-    frontier = FrontierDataStructure()
 
   immediate_rewards = []
   visited = []
@@ -206,45 +199,12 @@ def parameterizedSearch(problem, FrontierDataStructure, priorityFunction=None, h
     visited.append(best_successor)
     frontier.push((best_successor, new_history if action else []))
 
-def depthFirstSearch(problem):
-  """
-  Search the deepest nodes in the search tree first [p 85].
-  
-  Your search algorithm needs to return a list of actions that reaches
-  the goal.  Make sure to implement a graph search algorithm [Fig. 3.7].
-  
-  To get started, you might want to try some of these simple commands to
-  understand the search problem that is being passed in:
-  
-  print "Start:", problem.getStartState()
-  print "Is the start a goal?", problem.isGoalState(problem.getStartState())
-  print "Start's successors:", problem.getSuccessors(problem.getStartState())
-  """
-  return parameterizedSearch(problem, util.Stack)
-
-def breadthFirstSearch(problem):
-  "Search the shallowest nodes in the search tree first. [p 81]"
-  "*** YOUR CODE HERE ***"
-  return parameterizedSearch(problem, util.Queue)
-      
-def uniformCostSearch(problem):
-  "Search the node of least total cost first. "
-  "*** YOUR CODE HERE ***"
-  # The item is a four-tuple described in the parameterizedSearch function,
-  # where x[2] is the cost required to get to the node
-  return parameterizedSearch(problem, util.PriorityQueueWithFunction, lambda x: x[2])
-
 def nullHeuristic(state, problem=None):
   """
   A heuristic function estimates the cost from the current state to the nearest
   goal in the provided SearchProblem.  This heuristic is trivial.
   """
   return 0
-
-def aStarSearch(problem, heuristic=nullHeuristic):
-  "Search the node that has the lowest combined cost and heuristic first."
-  "*** YOUR CODE HERE ***"
-  return parameterizedSearch(problem, util.PriorityQueueWithFunction, None, heuristic)
 
 def clear_lines(grid):
   """

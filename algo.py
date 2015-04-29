@@ -137,13 +137,17 @@ def evaluate_state(state, problem):
     return -1.0/1000*(72*get_height(heights) + 75*average_height(heights) + 442*get_num_holes(grid) + 56*bumpiness(heights) + 352 * valleys(grid, heights))
 
 
-class TetrisSearchProblem(search.SearchProblem):
+class TetrisLearningProblem():
     def __init__(self, lookahead=1,verbose=False):
         # Number of pieces for which we want to look ahead for
         # `1` meaning we look only at the next piece
         # `2` meaning we base it off the next two pieces, and so on
         self.lookahead = lookahead
         self.verbose = verbose
+        self.epsilon_func = 
+        self.alpha_func =
+        self.gamma = 0.95
+
 
         # Generate random sequence of pieces for offline tetris
         NUM_PIECES = 10
@@ -163,9 +167,22 @@ class TetrisSearchProblem(search.SearchProblem):
             for j in range(GRID_WIDTH):
                 self.initial_board[i].append(None)   
 
+
+
     def getStartState(self):
         # Tuple of configuration and past grids
         return { "pieces": self.all_pieces, "board": self.initial_board }
+
+    def convertState(self,state, type = 0):
+        skyline = get_height_list(state['board'])
+        holes = []
+        for col in skyline:
+            col_holes = sum([1 for x in range(col) if not self.initial_board[x][col]])
+            holes.append(col_holes)
+        converted = {}
+        converted['skyline'] = skyline
+        converted['holes'] = holes
+        converted['next'] = state['pieces'][0]
 
     def isGoalState(self, state):
         # Should be a goal state when there are no pieces left
@@ -205,7 +222,7 @@ class TetrisSearchProblem(search.SearchProblem):
         return rotated_pieces
 
 
-    def getReward(self, state, action):
+    def getReward(self, state, newstate):
         """
         Returns the empirical reward for a state and action
 
@@ -276,9 +293,6 @@ class TetrisSearchProblem(search.SearchProblem):
 
         return successors
 
-    def getCostOfActions(self, actions):
-        pass
-
 def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=False, verbose=False):
     """
     Test harness
@@ -299,17 +313,34 @@ def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=Fal
         print "Game Replay Disabled"
 
     total_lines = []
-    for i in range(ntrial):
-        problem = TetrisSearchProblem(lookahead=lookahead,verbose=verbose)
+    for n in range(ntrial):
+        problem = TetrisLearningProblem(lookahead=lookahead,verbose=verbose)
+        value_table = {}
+        for e in range(nepisode):
+            last_state = problem.convertState(problem.getStartState())
+            next_state = last_state
+            last_successor = None
+            for i in range(niter):
+                successors = problem.getSuccessors(last_state)
+                if not value_table.get(next_state):
+                    value_table[next_state] = collections.defaultdict(float)
+                q_vals = [value_table[next_state][successor] for successor in successors]
+                max_successor = succesors[np.argmax(q_vals)]
+                delta = problem.getReward() + problem.gamma*value_table[next_state][max_succesor] - value_table[last_state][last_successor]
+                value_table[last_state][last_successor] += problem.alpha_func(i)*delta
+                last_state = next_state
+                if random.random() < problem.epsilon_func(i):
+                    last_successor = random.choice(tetris.SHAPES)
+                else:
+                    last_action = max_successor
 
-        current_node = None
-        
-        # Game loop: keep playing the game until all of the pieces are done
-        while current_node is None or len(current_node["pieces"]) > 0:
+                # perform action
+
+
+
             print current_node
-            game_replay, goal_node = search.aStarSearch(problem, heuristic)
-            current_node = goal_node
-
+            game_replay, goal_node = #search.aStarSearch(problem, heuristic)
+ 
             if watchGames:
                 for grid in game_replay:
                     print_grid(grid)
