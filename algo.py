@@ -144,7 +144,7 @@ class TetrisLearningProblem():
         Resets the tetris board to empty and re-initializes with a random set of pieces
         """
         # Generate random sequence of pieces for offline tetris
-        NUM_PIECES = 10
+        NUM_PIECES = 5
         self.pieces = [random.choice(tetris.SHAPES) for i in xrange(NUM_PIECES)]
 
         # Set up an empty board
@@ -171,13 +171,14 @@ class TetrisLearningProblem():
         """
         Returns true if the game is over: either out of pieces or lost on board
         """
-        # TODO(louisli): or if the game is lost
-        return len(self.pieces) == 0
+        return len(self.pieces) == 0 or len(self.get_possible_actions()) == 0
 
     def perform_action(self, action):
         """
         Perform an action. An action is just a Block().
         (basically just changes the current board to whatever preview_action gives)
+
+        This should be the only way to mutate the internal state.
         """
         new_board = self.preview_action(action)
 
@@ -193,6 +194,7 @@ class TetrisLearningProblem():
         if debug:
             print "Cleared lines: ", lines_cleared
             print "Number of holes: ", num_holes
+            print "Reward: ", reward
 
         # Update internal state
         self.board = new_board
