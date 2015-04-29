@@ -182,8 +182,7 @@ class TetrisLearningProblem():
         new_board = self.preview_action(action)
 
         # Compute the number of lines cleared
-        lines_cleared = 1
-
+        lines_cleared = clear_lines(new_board)  # Side effecting
         assert(lines_cleared <= 4)
 
         # Subtract the number of holes
@@ -192,7 +191,6 @@ class TetrisLearningProblem():
         reward = 2**lines_cleared - num_holes
 
         self.board = new_board
-        reward = self._get_reward()
         return reward
 
     def preview_action(self, action):
@@ -322,21 +320,6 @@ class TetrisLearningProblem():
 
         return rotated_pieces
 
-
-    def _get_reward(self, state, action):
-        """
-        Returns the reward for being in the current state
-        Normally, reward is r(s, a), but in our case, it only depends on the current state.
-        We'll return this value when the agent performs an action.
-
-        Arg:
-            The current state (after performing an action)
-        Returns: 
-            a numeric value
-        """
-
-        return 1  # TODO
-
 def test_tetris(ntrial=10, lookahead=1, heuristic=None, watchGames=False, verbose=False):
     """
     Test harness
@@ -411,6 +394,54 @@ def test_tetris(ntrial=10, lookahead=1, heuristic=None, watchGames=False, verbos
 
     print "Lines by Game: " + str(total_lines)
     print "Total Lines: " + str(sum(total_lines)) + " in " + str(ntrial) + " games."
+
+def clear_lines(grid):
+  """
+  Clear lines from a grid. Mutates grid.
+  
+  Taken from tetris.py, Tetris.clear_lines()
+  
+  Returns:
+      The number of lines cleared
+  """
+  count=0
+  for i in range(20):
+      full=True
+      for j in range(10):
+          if(grid[i][j] is None): 
+              full=False
+              break
+      if(full):
+          count+=1
+          for j in range(10):
+              grid[i][j]=None
+  i=19
+  j=18
+  while(i>0 and j>=0):
+      null=True
+      for k in range(10):
+          if(grid[i][k] is not None):
+              null=False
+              break
+      if(null):
+          j=min(i-1,j)
+          while(j>=0 and null):
+              null=True
+              for k in range(10):
+                  if(grid[j][k] is not None):
+                      null=False
+                      break
+              if(null): j-=1
+          if(j<0): break
+          for k in range(10):
+              grid[i][k]=grid[j][k]
+              grid[j][k]=None
+              if(grid[i][k] is not None): grid[i][k].y=tetris.HALF_WIDTH+i*tetris.FULL_WIDTH
+          j-=1
+      i-=1
+  
+  return count
+  
 
 def stringify_board(board):
     """
