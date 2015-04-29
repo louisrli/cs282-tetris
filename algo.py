@@ -173,16 +173,26 @@ class TetrisLearningProblem():
         # Tuple of configuration and past grids
         return { "pieces": self.all_pieces, "board": self.initial_board }
 
-    def convertState(self,state, type = 0):
+    def convertState(self,state, hole='high',k=0,num_next=1):
         skyline = get_height_list(state['board'])
         holes = []
         for col in skyline:
-            col_holes = sum([1 for x in range(col) if not self.initial_board[x][col]])
-            holes.append(col_holes)
+            if hole == 'high':
+                col_holes = sum([1 for x in range(col) if not state['board'][x][col]])
+                holes.append(col_holes)
+            else:
+                highest_hole = -1
+                for i in range(col,-1,-1):
+                    if not state['board'][i][col]:
+                        highest_hole = i
+                        continue
+                holes.append(highest_hole)
+            
         converted = {}
-        converted['skyline'] = skyline
+        converted['skyline'] = [max(0,col-k) for k in skyline]
         converted['holes'] = holes
-        converted['next'] = state['pieces'][0]
+        converted['next'] = state['pieces'][:num_next]
+        return converted
 
     def isGoalState(self, state):
         # Should be a goal state when there are no pieces left
