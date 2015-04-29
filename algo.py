@@ -125,17 +125,6 @@ def get_lines_cleared(gnew, gold):
         return 0
     return
 
-""" EVALUATION FUNCTION """
-def evaluate_state(state, problem):
-    """
-    Heuristic / scoring function for state
-    """
-    grid = state["board"]
-    heights = get_height_list(grid)
-    #return -(10*get_num_holes(grid) + 2**(get_height(heights)) + bumpiness(heights) + average_height(heights))
-    return -1.0/1000*(72*get_height(heights) + 75*average_height(heights) + 442*get_num_holes(grid) + 56*bumpiness(heights) + 352 * valleys(grid, heights))
-
-
 class TetrisLearningProblem():
     def __init__(self, gamma=0.95, verbose=False):
         self.verbose = verbose
@@ -190,7 +179,19 @@ class TetrisLearningProblem():
         Perform an action. An action is just a Block().
         (basically just changes the current board to whatever preview_action gives)
         """
-        self.board = self.preview_action(action)
+        new_board = self.preview_action(action)
+
+        # Compute the number of lines cleared
+        lines_cleared = 1
+
+        assert(lines_cleared <= 4)
+
+        # Subtract the number of holes
+        num_holes = get_num_holes(new_board)
+
+        reward = 2**lines_cleared - num_holes
+
+        self.board = new_board
         reward = self._get_reward()
         return reward
 
@@ -322,7 +323,7 @@ class TetrisLearningProblem():
         return rotated_pieces
 
 
-    def _get_reward(self):
+    def _get_reward(self, state, action):
         """
         Returns the reward for being in the current state
         Normally, reward is r(s, a), but in our case, it only depends on the current state.
@@ -333,9 +334,10 @@ class TetrisLearningProblem():
         Returns: 
             a numeric value
         """
+
         return 1  # TODO
 
-def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=False, verbose=False):
+def test_tetris(ntrial=10, lookahead=1, heuristic=None, watchGames=False, verbose=False):
     """
     Test harness
     """
