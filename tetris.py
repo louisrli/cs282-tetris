@@ -67,7 +67,6 @@ class Square():
         """
         Added by Louis. For printing ASCII squares
         """
-
         return TERM_COLORS[self.color] + "#" + Fore.RESET
         
     def move_up(self):
@@ -256,6 +255,7 @@ class Block():
             y=(y+self.y)/FULL_WIDTH
             if(y>=20 or x<0 or x>=10 or (y>=0 and grid[y][x] is not None)): return False
         return True 
+    
 
 class Tetris():
     def __init__(self):

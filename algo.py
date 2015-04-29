@@ -1,4 +1,3 @@
-import search
 import random
 import tetris
 import copy
@@ -138,65 +137,144 @@ def evaluate_state(state, problem):
 
 
 class TetrisLearningProblem():
-    def __init__(self, lookahead=1,verbose=False):
-        # Number of pieces for which we want to look ahead for
-        # `1` meaning we look only at the next piece
-        # `2` meaning we base it off the next two pieces, and so on
-        self.lookahead = lookahead
+    def __init__(self, gamma=0.95, verbose=False):
         self.verbose = verbose
-        self.epsilon_func = 
-        self.alpha_func =
         self.gamma = 0.95
+        self.epsilon_func = None  # TODO
+        self.alpha_func =  None   # TODO
 
+        # Initialized by reset()
+        self.board = None
+        self.pieces = None
 
+        # Set up the board and pieces
+        self.reset()
+
+    def reset(self):
+        """
+        Resets the tetris board to empty and re-initializes with a random set of pieces
+        """
         # Generate random sequence of pieces for offline tetris
         NUM_PIECES = 10
-        self.all_pieces = [random.choice(tetris.SHAPES) for i in xrange(NUM_PIECES)]
+        self.pieces = [random.choice(tetris.SHAPES) for i in xrange(NUM_PIECES)]
 
-        if demo:
-            self.all_pieces = [tetris.LINE_SHAPE, tetris.SQUARE_SHAPE, tetris.SQUARE_SHAPE,
-                 tetris.T_SHAPE, tetris.Z_SHAPE, tetris.L_SHAPE, tetris.LINE_SHAPE,
-                 tetris.T_SHAPE, tetris.T_SHAPE] + \
-                [tetris.LINE_SHAPE, tetris.SQUARE_SHAPE, tetris.INVERT_L_SHAPE, tetris.LINE_SHAPE, tetris.LINE_SHAPE] + \
-                [random.choice(tetris.SHAPES) for i in xrange(30)] 
-
-        # Taken from tetris.py: initial board setup
-        self.initial_board = []  
+        # Set up an empty board
+        self.board = []  
         for i in range(GRID_HEIGHT):
-            self.initial_board.append([])
+            self.board.append([])
             for j in range(GRID_WIDTH):
-                self.initial_board[i].append(None)   
+                self.board[i].append(None)   
 
+    def _get_internal_state(self):
+        """
+        Return an *internal* representation of the state as the board and the list of pieces
+        remaining.
+        """
+        return { "board": self.board, "pieces": self.pieces }
 
+    def observe(self):
+        """
+        Return a representation of the state for the agent to use
+        """
+        pass
 
-    def getStartState(self):
-        # Tuple of configuration and past grids
-        return { "pieces": self.all_pieces, "board": self.initial_board }
+    def is_terminal(self):
+        """
+        Returns true if the game is over: either out of pieces or lost on board
+        """
+        # TODO(louisli): or if the game is lost
+        return len(self.pieces) == 0
 
-    def convertState(self,state, hole='high',k=0,num_next=1):
+    def perform_action(self, action):
+        """
+        Perform an action. An action is just a Block()
+        """
+        piece = copy.deepcopy(action)
+
+        # Move the piece all the way down on the current board
+        while piece.move_down(self.board): pass
+
+        # Add the block to the grid and clear lines
+        try: 
+            merge_grid_block(self.board, piece)
+        except:
+            raise Exception
+
+        reward = self._get_reward()
+        return reward
+    
+    def get_possible_actions(self):
+        """
+        Based on the current state, return the list of possible actions
+
+        For the tetris domain, this is going to be:
+            (every possible rotation) x (every possible x-position)
+
+        As such, we encode an action as a Block() class from the framework.
+        Block contains stateful information about a piece's rotation and x-axis.
+        """
+        if len(self.pieces) == 0:
+            return []
+
+        # Put the piece in the right place
+        new_piece_type = self.pieces[0]
+        grid = copy.deepcopy(self.board)
+
+        possible_actions = []
+
+        new_piece = tetris.Block(new_piece_type)
+
+        # Because we're leveraging tetris.py, we have a lot of 
+        # side-effecting code going on -- have to be careful
+        possible_rotations = self._generateRotations(new_piece, grid)
+
+        # Starting from the left-hand side this moves the 
+        # piece to the right one column (i.e. every horizontal position).
+        # Then we move the piece all the way down.
+        # In this way, we enumerate all possible subsequent configurations.
+        for rotated_piece in possible_rotations:
+            can_move_right = True
+            offset = 0  # Distance from the left
+            while can_move_right:
+                piece_snapshot = copy.deepcopy(rotated_piece)
+                possible_actions.append(piece_snapshot)
+                can_move_right = rotated_piece.move_right(grid)  # has side-effects
+                offset += 1
+
+        return possible_actions
+
+    def _convert_state(state, hole='high',k=0,num_next=1):
+        """
+        Converts a state from the internal representation
+
+        Args:
+            hole: 
+                'high' -- represent holes by the height of highest holes
+                'count' -- represent holes by number of holes per column
+            k: The height of the skyline to examine (top k rows)
+            num_next: The number of next pieces to look at
+        """
         skyline = get_height_list(state['board'])
         holes = []
         for col in skyline:
-            if hole == 'high':
+            if hole == 'count':
                 col_holes = sum([1 for x in range(col) if not state['board'][x][col]])
                 holes.append(col_holes)
-            else:
+            elif hole == 'high':
                 highest_hole = -1
                 for i in range(col,-1,-1):
                     if not state['board'][i][col]:
                         highest_hole = i
                         continue
                 holes.append(highest_hole)
+            else: 
+                raise Exception
             
         converted = {}
         converted['skyline'] = [max(0,col-k) for k in skyline]
         converted['holes'] = holes
         converted['next'] = state['pieces'][:num_next]
         return converted
-
-    def isGoalState(self, state):
-        # Should be a goal state when there are no pieces left
-        return len(state["pieces"]) == 0
 
     def _generateRotations(self, piece, grid):
         """
@@ -232,76 +310,18 @@ class TetrisLearningProblem():
         return rotated_pieces
 
 
-    def getReward(self, state, newstate):
+    def _get_reward(self):
         """
-        Returns the empirical reward for a state and action
+        Returns the reward for being in the current state
+        Normally, reward is r(s, a), but in our case, it only depends on the current state.
+        We'll return this value when the agent performs an action.
 
-        Args:
-            state: the current state
-            action: a piece (and maybe an x-coordinate)?
-
-        Returns: a numeric value
-        
-        TODO
+        Arg:
+            The current state (after performing an action)
+        Returns: 
+            a numeric value
         """
-        pass
-
-    def getSuccessors(self, state):
-        """
-        Return a list of successor nodes
-        using the board and current piece. 
-        """
-        if len(state["pieces"]) == 0:
-            return None
-        
-        new_piece_type = state["pieces"][0]
-        grid = state["board"]
-
-        successors = []
-
-        new_piece = tetris.Block(new_piece_type)
-
-        # Because we're leveraging tetris.py, we have a lot of 
-        # side-effecting code going on -- have to be careful
-        possible_rotations = self._generateRotations(new_piece, grid)
-
-        # Starting from the left-hand side this moves the 
-        # piece to the right one column (i.e. every horizontal position).
-        # Then we move the piece all the way down.
-        # In this way, we enumerate all possible subsequent configurations.
-        for rotated_piece in possible_rotations:
-            can_move_right = True
-            while can_move_right:
-                # Copying the grids here might explode memory, but I think keeping
-                # a reference to the same grid repeatedly is going to be really dangerous
-                piece_copy = copy.deepcopy(rotated_piece)
-                grid_copy = copy.deepcopy(grid)
-
-                # Move the piece all the way down
-                while piece_copy.move_down(grid_copy): pass
-
-                # Add the block to the grid and clear lines
-                # filter out a successor that makes a game ending move
-                try:
-                    merge_grid_block(grid_copy, piece_copy)
-
-                    # UNCOMMENT FOR AN INFINITE GAME
-                    #  push a new random piece to replace the one we played
-                    # piece = random.choice(tetris.SHAPES)
-                    # state["pieces"].append(piece)
-
-                    successors.append({
-                        "board": grid_copy,
-                        "pieces": state["pieces"][1:] 
-                    })
-                except:
-                    pass
-                    #print "failed move!"
-
-                # Try the next configuration
-                can_move_right = rotated_piece.move_right(grid)  # has side-effects
-
-        return successors
+        return 1  # TODO
 
 def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=False, verbose=False):
     """
@@ -349,7 +369,7 @@ def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=Fal
 
 
             print current_node
-            game_replay, goal_node = #search.aStarSearch(problem, heuristic)
+            game_replay, goal_node = None, None
  
             if watchGames:
                 for grid in game_replay:
@@ -378,6 +398,22 @@ def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=Fal
     print "Lines by Game: " + str(total_lines)
     print "Total Lines: " + str(sum(total_lines)) + " in " + str(ntrial) + " games."
 
+def stringify_board(board):
+    """
+    Takes the board as a printed list and returns it as a pretty string.
+
+    Returns:
+        A string
+    """
+    parsed = string.replace(str(board), ',', '')
+    parsed = string.replace(parsed, 'None', '.')
+    parsed = string.lstrip(parsed, '[[')
+    parsed = string.rstrip(parsed, ']]\n')
+    
+    parselist = string.split(parsed, '] [')
+    return '\n'.join(parselist)
+
+
 def watchReplay(filename):
     with open(filename) as f:
         for line in f:
@@ -401,6 +437,7 @@ def printHelp():
     # print "\t-d, --demo\tWatch the class demo"
 
 def main():
+    return  # TODO: remove
 
     if len(sys.argv) < 2:
         printHelp()
