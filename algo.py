@@ -5,7 +5,7 @@ import sys
 from time import sleep
 import string
 
-debug = False
+debug = True
 demo = True
 TESTMODE = True
 
@@ -125,6 +125,7 @@ def get_lines_cleared(gnew, gold):
         return 0
     return
 
+<<<<<<< HEAD
 """ EVALUATION FUNCTION """
 def evaluate_state(state, problem):
     """
@@ -136,7 +137,7 @@ def evaluate_state(state, problem):
     return -1.0/1000*(72*get_height(heights) + 75*average_height(heights) + 442*get_num_holes(grid) + 56*bumpiness(heights) + 352 * valleys(grid, heights))
 
 
-def _convert_state(state, hole='high',k=0,num_next=1):
+def convert_state(state, hole='high',k=0,num_next=1):
     """
     Converts a state from the internal representation
 
@@ -228,7 +229,7 @@ class TetrisLearningProblem():
         Resets the tetris board to empty and re-initializes with a random set of pieces
         """
         # Generate random sequence of pieces for offline tetris
-        NUM_PIECES = 10
+        NUM_PIECES = 5
         self.pieces = [random.choice(tetris.SHAPES) for i in xrange(NUM_PIECES)]
 
         # Set up an empty board
@@ -255,17 +256,35 @@ class TetrisLearningProblem():
         """
         Returns true if the game is over: either out of pieces or lost on board
         """
-        # TODO(louisli): or if the game is lost
-        return len(self.pieces) == 0
+        return len(self.pieces) == 0 or len(self.get_possible_actions()) == 0
 
     def perform_action(self, action):
         """
         Perform an action. An action is just a Block().
         (basically just changes the current board to whatever preview_action gives)
+
+        This should be the only way to mutate the internal state.
         """
-        self.board = self.preview_action(action)
-        reward = self._get_reward()
-        return reward, self._convert_state(self._get_internal_state)
+        new_board = self.preview_action(action)
+
+        # Compute the number of lines cleared
+        lines_cleared = clear_lines(new_board)  # Side effecting
+        assert(lines_cleared <= 4)
+
+        # Subtract the number of holes
+        num_holes = get_num_holes(new_board)
+
+        reward = 2**lines_cleared - num_holes
+
+        if debug:
+            print "Cleared lines: ", lines_cleared
+            print "Number of holes: ", num_holes
+            print "Reward: ", reward
+
+        # Update internal state
+        self.board = new_board
+        self.pieces = self.pieces[1:]
+        return reward, convert_state(self._get_internal_state)
 
     def preview_action(self, action):
         """
@@ -362,6 +381,7 @@ class TetrisLearningProblem():
 
         return rotated_pieces
 
+<<<<<<< HEAD
 
     def _get_reward(self):
         """
@@ -377,7 +397,7 @@ class TetrisLearningProblem():
         return 1  # TODO
 
 
-def test_tetris(ntrial=10, nepisodes=50, niter=100, lookahead=1, heuristic=evaluate_state, watchGames=False, verbose=False):
+def test_tetris(ntrial=10, nepisodes=50, niter=100, lookahead=1, heuristic=None, watchGames=False, verbose=False):
     """
     Test harness
     """
@@ -404,7 +424,7 @@ def test_tetris(ntrial=10, nepisodes=50, niter=100, lookahead=1, heuristic=evalu
         agent.reset()
         for e in range(nepisode):
             problem.reset()
-            state = problem._convert_state(_get_internal_state())
+            state = convert_state(_get_internal_state())
             reward = None
             for i in range(niter):
                 action = agent.interact(reward, state, problem)
@@ -440,21 +460,52 @@ def test_tetris(ntrial=10, nepisodes=50, niter=100, lookahead=1, heuristic=evalu
     print "Lines by Game: " + str(total_lines)
     print "Total Lines: " + str(sum(total_lines)) + " in " + str(ntrial) + " games."
 
-def stringify_board(board):
-    """
-    Takes the board as a printed list and returns it as a pretty string.
-
-    Returns:
-        A string
-    """
-    parsed = string.replace(str(board), ',', '')
-    parsed = string.replace(parsed, 'None', '.')
-    parsed = string.lstrip(parsed, '[[')
-    parsed = string.rstrip(parsed, ']]\n')
-    
-    parselist = string.split(parsed, '] [')
-    return '\n'.join(parselist)
-
+def clear_lines(grid):
+  """
+  Clear lines from a grid. Mutates grid.
+  
+  Taken from tetris.py, Tetris.clear_lines()
+  
+  Returns:
+      The number of lines cleared
+  """
+  count=0
+  for i in range(20):
+      full=True
+      for j in range(10):
+          if(grid[i][j] is None): 
+              full=False
+              break
+      if(full):
+          count+=1
+          for j in range(10):
+              grid[i][j]=None
+  i=19
+  j=18
+  while(i>0 and j>=0):
+      null=True
+      for k in range(10):
+          if(grid[i][k] is not None):
+              null=False
+              break
+      if(null):
+          j=min(i-1,j)
+          while(j>=0 and null):
+              null=True
+              for k in range(10):
+                  if(grid[j][k] is not None):
+                      null=False
+                      break
+              if(null): j-=1
+          if(j<0): break
+          for k in range(10):
+              grid[i][k]=grid[j][k]
+              grid[j][k]=None
+              if(grid[i][k] is not None): grid[i][k].y=tetris.HALF_WIDTH+i*tetris.FULL_WIDTH
+          j-=1
+      i-=1
+  
+  return count
 
 def watchReplay(filename):
     with open(filename) as f:

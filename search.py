@@ -206,56 +206,6 @@ def nullHeuristic(state, problem=None):
   """
   return 0
 
-def clear_lines(grid):
-  """
-  Clear lines from a grid. Mutates grid.
-  
-  Taken from tetris.py, Tetris.clear_lines()
-  
-  Returns:
-      True if more than 0 lines were cleared. False otherwise
-  """
-  count=0
-  for i in range(20):
-      full=True
-      for j in range(10):
-          if(grid[i][j] is None): 
-              full=False
-              break
-      if(full):
-          count+=1
-          for j in range(10):
-              grid[i][j]=None
-  i=19
-  j=18
-  while(i>0 and j>=0):
-      null=True
-      for k in range(10):
-          if(grid[i][k] is not None):
-              null=False
-              break
-      if(null):
-          j=min(i-1,j)
-          while(j>=0 and null):
-              null=True
-              for k in range(10):
-                  if(grid[j][k] is not None):
-                      null=False
-                      break
-              if(null): j-=1
-          if(j<0): break
-          for k in range(10):
-              grid[i][k]=grid[j][k]
-              grid[j][k]=None
-              if(grid[i][k] is not None): grid[i][k].y=tetris.HALF_WIDTH+i*tetris.FULL_WIDTH
-          j-=1
-      i-=1
-  
-  if (count > 0):
-      return True
-  else:
-      return False
-  
 # Abbreviations
 bfs = breadthFirstSearch
 dfs = depthFirstSearch
