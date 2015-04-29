@@ -187,22 +187,34 @@ class TetrisLearningProblem():
 
     def perform_action(self, action):
         """
-        Perform an action. An action is just a Block()
+        Perform an action. An action is just a Block().
+        (basically just changes the current board to whatever preview_action gives)
         """
+        self.board = self.preview_action(action)
+        reward = self._get_reward()
+        return reward
+
+    def preview_action(self, action):
+        """
+        Given an action, return the new board, but does not internally modify the current
+        state of the world
+
+        Returns:
+            A board
+        """
+        grid = copy.deepcopy(self.board)
         piece = copy.deepcopy(action)
 
         # Move the piece all the way down on the current board
-        while piece.move_down(self.board): pass
+        while piece.move_down(grid): pass
 
         # Add the block to the grid and clear lines
         try: 
-            merge_grid_block(self.board, piece)
+            merge_grid_block(grid, piece)
         except:
             raise Exception
-
-        reward = self._get_reward()
-        return reward
-    
+        return grid
+   
     def get_possible_actions(self):
         """
         Based on the current state, return the list of possible actions
