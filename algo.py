@@ -125,7 +125,7 @@ def get_lines_cleared(gnew, gold):
         return 0
     return
 
-<<<<<<< HEAD
+
 """ EVALUATION FUNCTION """
 def evaluate_state(state, problem):
     """
@@ -169,6 +169,8 @@ def convert_state(state, hole='high',k=0,num_next=1):
     converted['holes'] = holes
     converted['next'] = state['pieces'][:num_next]
     return converted
+
+
 class TetrisAgent()
     def __init__(self, gamma=0.95, epsilon, alpha):
         self.gamma = gamma
@@ -381,7 +383,6 @@ class TetrisLearningProblem():
 
         return rotated_pieces
 
-<<<<<<< HEAD
 
     def _get_reward(self):
         """
