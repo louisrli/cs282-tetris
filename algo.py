@@ -136,12 +136,85 @@ def evaluate_state(state, problem):
     return -1.0/1000*(72*get_height(heights) + 75*average_height(heights) + 442*get_num_holes(grid) + 56*bumpiness(heights) + 352 * valleys(grid, heights))
 
 
+def _convert_state(state, hole='high',k=0,num_next=1):
+    """
+    Converts a state from the internal representation
+
+    Args:
+        hole: 
+            'high' -- represent holes by the height of highest holes
+            'count' -- represent holes by number of holes per column
+        k: The height of the skyline to examine (top k rows)
+        num_next: The number of next pieces to look at
+    """
+    skyline = get_height_list(state['board'])
+    holes = []
+    for col in skyline:
+        if hole == 'count':
+            col_holes = sum([1 for x in range(col) if not state['board'][x][col]])
+            holes.append(col_holes)
+        elif hole == 'high':
+            highest_hole = -1
+            for i in range(col,-1,-1):
+                if not state['board'][i][col]:
+                    highest_hole = i
+                    continue
+            holes.append(highest_hole)
+        else: 
+            raise Exception
+        
+    converted = {}
+    converted['skyline'] = [max(0,col-k) for k in skyline]
+    converted['holes'] = holes
+    converted['next'] = state['pieces'][:num_next]
+    return converted
+class TetrisAgent()
+    def __init__(self, gamma=0.95, epsilon, alpha):
+        self.gamma = gamma
+        self.epsilon_func = epsilon
+        self.alpha_func = alpha
+        self.iteration = 1
+        self.value_table = {}
+        self.last_state = None
+        self.last_action = None
+        self.reset()
+
+    def reset(self):
+        self.value_table = {}
+        self.last_state = None
+        self.last_action = None
+        self.iteration = 1
+
+    def interact(self, reward, next_state, problem):
+        # Handle start of episode
+        actions = problem.get_possible_actions(next_state)
+        if reward is None:
+            self.last_state = next_state
+            self.last_action = random.choice(actions)
+            return self.last_action
+
+        if not self.value_table.get(next_state):
+            self.value_table[next_state] = collections.defaultdict(float)
+        if not self.value_table.get(self.last_state):
+            self.value_table[self.last_state] = collections.defaultdict(float)
+        q_vals = [self.value_table[next_state][action] for action in actions]
+        max_action = actions[np.argmax(q_vals)]
+        delta = reward + self.gamma*self.value_table[next_state][max_action] - self.value_table[self.last_state][self.last_action]
+        self.value_table[self.last_state][self.last_action] += self.alpha_func(self.iteration)*delta
+        self.iteration += 1
+        
+        self.last_state = next_state
+        if random.random() < self.epsilon_func(self.iteration):
+            self.last_action = random.choice(actions)
+        else:
+            self.last_action = max_action
+        
+        return self.last_action
+
+
 class TetrisLearningProblem():
     def __init__(self, gamma=0.95, verbose=False):
         self.verbose = verbose
-        self.gamma = 0.95
-        self.epsilon_func = None  # TODO
-        self.alpha_func =  None   # TODO
 
         # Initialized by reset()
         self.board = None
@@ -192,7 +265,7 @@ class TetrisLearningProblem():
         """
         self.board = self.preview_action(action)
         reward = self._get_reward()
-        return reward
+        return reward, self._convert_state(self._get_internal_state)
 
     def preview_action(self, action):
         """
@@ -255,38 +328,6 @@ class TetrisLearningProblem():
 
         return possible_actions
 
-    def _convert_state(state, hole='high',k=0,num_next=1):
-        """
-        Converts a state from the internal representation
-
-        Args:
-            hole: 
-                'high' -- represent holes by the height of highest holes
-                'count' -- represent holes by number of holes per column
-            k: The height of the skyline to examine (top k rows)
-            num_next: The number of next pieces to look at
-        """
-        skyline = get_height_list(state['board'])
-        holes = []
-        for col in skyline:
-            if hole == 'count':
-                col_holes = sum([1 for x in range(col) if not state['board'][x][col]])
-                holes.append(col_holes)
-            elif hole == 'high':
-                highest_hole = -1
-                for i in range(col,-1,-1):
-                    if not state['board'][i][col]:
-                        highest_hole = i
-                        continue
-                holes.append(highest_hole)
-            else: 
-                raise Exception
-            
-        converted = {}
-        converted['skyline'] = [max(0,col-k) for k in skyline]
-        converted['holes'] = holes
-        converted['next'] = state['pieces'][:num_next]
-        return converted
 
     def _generateRotations(self, piece, grid):
         """
@@ -335,7 +376,8 @@ class TetrisLearningProblem():
         """
         return 1  # TODO
 
-def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=False, verbose=False):
+
+def test_tetris(ntrial=10, nepisodes=50, niter=100, lookahead=1, heuristic=evaluate_state, watchGames=False, verbose=False):
     """
     Test harness
     """
@@ -355,30 +397,18 @@ def test_tetris(ntrial=10, lookahead=1, heuristic=evaluate_state, watchGames=Fal
         print "Game Replay Disabled"
 
     total_lines = []
+    problem = TetrisLearningProblem(lookahead=lookahead,verbose=verbose)
+    agent = TetrisAgent(epsilon=lambda x: 0.02,alpha=lambda x: 1./x)
     for n in range(ntrial):
-        problem = TetrisLearningProblem(lookahead=lookahead,verbose=verbose)
-        value_table = {}
+        problem.reset()
+        agent.reset()
         for e in range(nepisode):
-            last_state = problem.convertState(problem.getStartState())
-            next_state = last_state
-            last_successor = None
+            problem.reset()
+            state = problem._convert_state(_get_internal_state())
+            reward = None
             for i in range(niter):
-                successors = problem.getSuccessors(last_state)
-                if not value_table.get(next_state):
-                    value_table[next_state] = collections.defaultdict(float)
-                q_vals = [value_table[next_state][successor] for successor in successors]
-                max_successor = succesors[np.argmax(q_vals)]
-                delta = problem.getReward() + problem.gamma*value_table[next_state][max_succesor] - value_table[last_state][last_successor]
-                value_table[last_state][last_successor] += problem.alpha_func(i)*delta
-                last_state = next_state
-                if random.random() < problem.epsilon_func(i):
-                    last_successor = random.choice(tetris.SHAPES)
-                else:
-                    last_action = max_successor
-
-                # perform action
-
-
+                action = agent.interact(reward, state, problem)
+                reward, state = problem.perform_action(action)
 
             print current_node
             game_replay, goal_node = None, None
