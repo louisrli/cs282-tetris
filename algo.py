@@ -5,7 +5,7 @@ import sys
 from time import sleep
 import string
 
-debug = False
+debug = True
 demo = True
 TESTMODE = True
 
@@ -190,7 +190,13 @@ class TetrisLearningProblem():
 
         reward = 2**lines_cleared - num_holes
 
+        if debug:
+            print "Cleared lines: ", lines_cleared
+            print "Number of holes: ", num_holes
+
+        # Update internal state
         self.board = new_board
+        self.pieces = self.pieces[1:]
         return reward
 
     def preview_action(self, action):
@@ -441,23 +447,6 @@ def clear_lines(grid):
       i-=1
   
   return count
-  
-
-def stringify_board(board):
-    """
-    Takes the board as a printed list and returns it as a pretty string.
-
-    Returns:
-        A string
-    """
-    parsed = string.replace(str(board), ',', '')
-    parsed = string.replace(parsed, 'None', '.')
-    parsed = string.lstrip(parsed, '[[')
-    parsed = string.rstrip(parsed, ']]\n')
-    
-    parselist = string.split(parsed, '] [')
-    return '\n'.join(parselist)
-
 
 def watchReplay(filename):
     with open(filename) as f:
