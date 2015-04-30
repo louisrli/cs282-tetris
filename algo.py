@@ -199,6 +199,7 @@ class TetrisAgent():
         self.iteration = 1
 
     def interact(self, reward, next_state, problem):
+        print "Size of state space: ", self._get_num_keys()
         # Handle start of episode
         actions = problem.get_possible_actions()
         random.shuffle(actions)
@@ -213,6 +214,7 @@ class TetrisAgent():
         q_vals = [self.value_table[next_state][action] for action in actions]
         max_action = actions[np.argmax(q_vals)]
         delta = reward + self.gamma*self.value_table[next_state][max_action] - self.value_table[self.last_state][self.last_action]
+
         self.value_table[self.last_state][self.last_action] += self.alpha_func(self.iteration)*delta
         self.iteration += 1
         
@@ -223,6 +225,16 @@ class TetrisAgent():
             self.last_action = max_action
         
         return self.last_action
+
+    def _get_num_keys(self):
+        """ 
+        For debugging. Return the number of keys in value_table
+        """
+        keys = 0
+        for k in self.value_table.keys():
+            keys += len(self.value_table[k].keys())
+        return keys
+
 
 
 class TetrisLearningProblem():

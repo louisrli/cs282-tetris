@@ -25,15 +25,15 @@ GUI_COLOR=224,224,224
 LINE_COLOR=BLACK
 
 #define measures
-HEIGHT,WIDTH=400,200
-HALF_WIDTH=10
+GRID_WIDTH = 6
+HEIGHT,WIDTH=(400, 20 * GRID_WIDTH)
+HALF_WIDTH=GRID_WIDTH
 FULL_WIDTH=2*HALF_WIDTH
 LINE_WIDTH=2
 MID_X=WIDTH/2
 PREVIEW_POS=[(WIDTH+7*FULL_WIDTH,3*FULL_WIDTH),(WIDTH+12*FULL_WIDTH,3*FULL_WIDTH),(WIDTH+17*FULL_WIDTH,3*FULL_WIDTH)]
 SAVED_POS=(WIDTH+7*FULL_WIDTH,9*FULL_WIDTH)
 
-GRID_WIDTH = 6
 """
 Added by Louis
 Pretty print tetris
@@ -59,6 +59,9 @@ last_move=0
 last_rotate=0
 
 class Square():
+    def __hash__(self):
+        return hash((self.x, self.y))
+
     def __init__(self,color,pos):
         self.color=color
         self.x=pos[0]
@@ -114,9 +117,20 @@ Z_SHAPE = 4
 INVERT_L_SHAPE = 5
 L_SHAPE = 6
 
-SHAPES = [LINE_SHAPE, T_SHAPE, SQUARE_SHAPE, INVERT_Z_SHAPE, Z_SHAPE, INVERT_L_SHAPE, L_SHAPE]
+SHAPES = [LINE_SHAPE, T_SHAPE, Z_SHAPE]
+# SHAPES = [LINE_SHAPE, T_SHAPE, SQUARE_SHAPE, INVERT_Z_SHAPE, Z_SHAPE, INVERT_L_SHAPE, L_SHAPE]
+
+visited = set()
 
 class Block():
+    def __hash__(self):
+        tupsq = self.get_square_xys()
+        h = hash((self.type, sum(hash(t) for t in tupsq)))
+        return h
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
     def __init__(self,type):
 #type=0
         self.type=type
@@ -256,6 +270,20 @@ class Block():
             y=(y+self.y)/FULL_WIDTH
             if(y>=20 or x<0 or x>=GRID_WIDTH or (y>=0 and grid[y][x] is not None)): return False
         return True 
+
+    def get_square_xys(self):
+        s = []
+        for square in self.squares:
+            x=square.x-self.x
+            y=square.y-self.y
+            temp=x
+            x=y
+            y=-temp
+            x=(x+self.x)/FULL_WIDTH
+            y=(y+self.y)/FULL_WIDTH
+            s.append((x, y))
+        return sorted(s)
+
     
 
 class Tetris():
