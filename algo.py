@@ -171,7 +171,7 @@ def get_num_holes(g):
 def get_lines_cleared(gnew, gold):
     diff_lines = get_height(gnew) - get_height(gold)
     if diff_lines > -4:
-        return -100 # strongly prefer clearing 4 at a time
+        return -50 # strongly prefer clearing 4 at a time
     else:
         return 0
     return
@@ -333,7 +333,7 @@ class TetrisLearningProblem():
 
         This should be the only way to mutate the internal state.
         """
-        LOSS_REWARD = -100
+        LOSS_REWARD = -30
         new_board = self.preview_action(action)
         if new_board is None:
             self.gameover = True
@@ -344,11 +344,13 @@ class TetrisLearningProblem():
         assert(lines_cleared <= 4)
 
         # Subtract the number of holes
-        num_holes = get_num_holes(new_board)
+        num_new_holes = get_num_holes(new_board) - get_num_holes(self.board)
 
-        line_clear_reward = 0 if (lines_cleared == 0) else 2**(lines_cleared - 1)
-        reward = line_clear_reward - num_holes
-        #reward = evaluate_state(self._get_internal_state())
+        # Subtract the overall height difference
+        num_new_height = max(get_height_list(new_board)) - max(get_height_list(self.board))
+
+        line_clear_reward = -2 if (lines_cleared == 0) else 2**(lines_cleared - 1)
+        reward = line_clear_reward - num_new_holes - num_new_height
 
         # Update internal state
         self.board = new_board
@@ -453,7 +455,7 @@ class TetrisLearningProblem():
         return rotated_pieces
 
 
-def test_tetris(ntrials=1, nepisodes=1000, niter=100):
+def test_tetris(ntrials=5, nepisodes=50, niter=100):
     """
     Test harness
     """
@@ -465,6 +467,7 @@ def test_tetris(ntrials=1, nepisodes=1000, niter=100):
         problem.reset()
         agent.reset()
         for e in range(nepisodes):
+            print "Episode", e
             rewards = []
             problem.reset()
             state = convert_state(problem._get_internal_state(), k=17)
@@ -473,18 +476,19 @@ def test_tetris(ntrials=1, nepisodes=1000, niter=100):
                 if problem.is_terminal():
                     break
                 #sleep(.5)
-                #print_grid(problem._get_internal_state()['board'])
+                # print_grid(problem._get_internal_state()['board'])
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
                 state = convert_state(state, k=17)
                 rewards.append(reward)
             reward_mat[n][e] = sum(rewards)
-        fig = plt.figure()
-        plt.plot(np.sum(reward_mat,axis=0)/ntrials)
-        plt.xlabel('episodes')
-        plt.ylabel('cumulative rewards')
-        plt.title('cumulative rewards vs episodes')
-        plt.show()
+
+    fig = plt.figure()
+    plt.plot(np.sum(reward_mat,axis=0)/ntrials)
+    plt.xlabel('episodes')
+    plt.ylabel('cumulative rewards')
+    plt.title('cumulative rewards vs episodes')
+    plt.show()
 
 def main():
     test_tetris()
