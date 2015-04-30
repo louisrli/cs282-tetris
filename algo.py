@@ -128,6 +128,22 @@ def get_lines_cleared(gnew, gold):
         return 0
     return
 
+def get_ttl(grid):
+    """
+    Returns the top two levels of the grid
+    """
+    height = max(get_height_list(grid))
+    top_index = GRID_HEIGHT - height
+
+    # Take the top two rows if we're almost dead
+    if height == GRID_HEIGHT or height == GRID_HEIGHT - 1:
+        top_index = 0
+
+    rows = grid[top_index:top_index + 2]
+    as_ones = []
+    for row in rows:
+        as_ones.append(tuple([0 if s is None else 1 for s in row]))
+    return tuple(as_ones)
 
 def convert_state(state, hole='count',k=0,num_next=1):
     """
@@ -140,6 +156,9 @@ def convert_state(state, hole='count',k=0,num_next=1):
         k: The height of the skyline to examine (top k rows)
         num_next: The number of next pieces to look at
     """
+    return get_ttl(state['board'])
+
+def ignore():
     skyline = get_height_list(state['board'])
     holes = []
     for col in range(GRID_WIDTH):
@@ -394,7 +413,7 @@ class TetrisLearningProblem():
         return 1  # TODO
 
 
-def test_tetris(ntrial=10, nepisodes=50, niter=100):
+def test_tetris(ntrial=10, nepisodes=1000, niter=100):
     """
     Test harness
     """
@@ -410,7 +429,7 @@ def test_tetris(ntrial=10, nepisodes=50, niter=100):
             for i in range(niter):
                 if problem.is_terminal():
                     break
-                # print_grid(problem._get_internal_state()['board'])
+                print_grid(problem._get_internal_state()['board'])
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
                 state = convert_state(state)
