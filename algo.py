@@ -13,7 +13,7 @@ demo = True
 TESTMODE = True
 
 GRID_HEIGHT = 20
-GRID_WIDTH = 10
+GRID_WIDTH = 6
 
 def print_grid(grid, block=None):
     """
@@ -176,17 +176,22 @@ def get_lines_cleared(gnew, gold):
         return 0
     return
 
-
-""" EVALUATION FUNCTION """
-def evaluate_state(state):
+def get_ttl(grid):
     """
-    Heuristic / scoring function for state
+    Returns the top two levels of the grid
     """
-    grid = state["board"]
-    heights = get_height_list(grid)
-    #return -(10*get_num_holes(grid) + 2**(get_height(heights)) + bumpiness(heights) + average_height(heights))
-    return -1.0/1000*(72*get_height(heights) + 75*average_height(heights) + 442*get_num_holes(grid) + 56*bumpiness(heights) + 352 * valleys(grid, heights))
+    height = max(get_height_list(grid))
+    top_index = GRID_HEIGHT - height
 
+    # Take the top two rows if we're almost dead
+    if height == GRID_HEIGHT or height == GRID_HEIGHT - 1:
+        top_index = 0
+
+    rows = grid[top_index:top_index + 2]
+    as_ones = []
+    for row in rows:
+        as_ones.append(tuple([0 if s is None else 1 for s in row]))
+    return tuple(as_ones)
 
 def convert_state(state, hole='high',k=0,num_next=1):
     """
@@ -199,6 +204,9 @@ def convert_state(state, hole='high',k=0,num_next=1):
         k: The height of the skyline to examine (top k rows)
         num_next: The number of next pieces to look at
     """
+    return get_ttl(state['board'])
+
+def ignore():
     skyline = get_height_list(state['board'])
     holes = []
     for col in range(GRID_WIDTH):
@@ -239,6 +247,7 @@ class TetrisAgent():
         self.iteration = 1
 
     def interact(self, reward, next_state, problem):
+        print "Size of state space: ", self._get_num_keys()
         # Handle start of episode
         actions = problem.get_possible_actions()
         random.shuffle(actions)
@@ -253,6 +262,7 @@ class TetrisAgent():
         q_vals = [self.value_table[next_state][action] for action in actions]
         max_action = actions[np.argmax(q_vals)]
         delta = reward + self.gamma*self.value_table[next_state][max_action] - self.value_table[self.last_state][self.last_action]
+
         self.value_table[self.last_state][self.last_action] += self.alpha_func(self.iteration)*delta
         self.iteration += 1
         
@@ -263,6 +273,16 @@ class TetrisAgent():
             self.last_action = max_action
         
         return self.last_action
+
+    def _get_num_keys(self):
+        """ 
+        For debugging. Return the number of keys in value_table
+        """
+        keys = 0
+        for k in self.value_table.keys():
+            keys += len(self.value_table[k].keys())
+        return keys
+
 
 
 class TetrisLearningProblem():
@@ -284,7 +304,7 @@ class TetrisLearningProblem():
         self.gameover = False
 
         # Generate random sequence of pieces for offline tetris
-        NUM_PIECES = 100
+        NUM_PIECES = 10000
         self.pieces = [random.choice(tetris.SHAPES) for i in xrange(NUM_PIECES)]
 
         # Set up an empty board
@@ -434,7 +454,7 @@ class TetrisLearningProblem():
         return rotated_pieces
 
 
-def test_tetris(ntrials=1, nepisodes=20, niter=100):
+def test_tetris(ntrials=1, nepisodes=1000, niter=100):
     """
     Test harness
     """
@@ -458,6 +478,7 @@ def test_tetris(ntrials=1, nepisodes=20, niter=100):
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
                 state = convert_state(state, k=17)
+                print "iterations before losing:", i
                 rewards.append(reward)
             reward_mat[n][e] = sum(rewards)
         fig = plt.figure()

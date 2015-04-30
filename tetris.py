@@ -25,8 +25,9 @@ GUI_COLOR=224,224,224
 LINE_COLOR=BLACK
 
 #define measures
-HEIGHT,WIDTH=400,200
-HALF_WIDTH=10
+GRID_WIDTH = 6
+HEIGHT,WIDTH=(400, 20 * GRID_WIDTH)
+HALF_WIDTH=GRID_WIDTH
 FULL_WIDTH=2*HALF_WIDTH
 LINE_WIDTH=2
 MID_X=WIDTH/2
@@ -58,6 +59,9 @@ last_move=0
 last_rotate=0
 
 class Square():
+    def __hash__(self):
+        return hash((self.x, self.y))
+
     def __init__(self,color,pos):
         self.color=color
         self.x=pos[0]
@@ -113,9 +117,20 @@ Z_SHAPE = 4
 INVERT_L_SHAPE = 5
 L_SHAPE = 6
 
-SHAPES = [LINE_SHAPE, T_SHAPE, SQUARE_SHAPE, INVERT_Z_SHAPE, Z_SHAPE, INVERT_L_SHAPE, L_SHAPE]
+SHAPES = [LINE_SHAPE, T_SHAPE, Z_SHAPE]
+# SHAPES = [LINE_SHAPE, T_SHAPE, SQUARE_SHAPE, INVERT_Z_SHAPE, Z_SHAPE, INVERT_L_SHAPE, L_SHAPE]
+
+visited = set()
 
 class Block():
+    def __hash__(self):
+        tupsq = self.get_square_xys()
+        h = hash((self.type, sum(hash(t) for t in tupsq)))
+        return h
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
     def __init__(self,type):
 #type=0
         self.type=type
@@ -230,7 +245,7 @@ class Block():
         for square in self.squares:
             x=(square.x/FULL_WIDTH)+dx
             y=(square.y/FULL_WIDTH)+dy
-            if(y>=20 or x<0 or x>=10 or (y>=0 and grid[y][x] is not None)):
+            if(y>=20 or x<0 or x>=GRID_WIDTH or (y>=0 and grid[y][x] is not None)):
                 return False
         return True
     def can_CW(self,grid):
@@ -242,7 +257,7 @@ class Block():
             y=temp
             x=(x+self.x)/FULL_WIDTH
             y=(y+self.y)/FULL_WIDTH
-            if(y>=20 or x<0 or x>=10 or (y>=0 and grid[y][x] is not None)): return False
+            if(y>=20 or x<0 or x>=GRID_WIDTH or (y>=0 and grid[y][x] is not None)): return False
         return True
     def can_CCW(self,grid):
         for square in self.squares:
@@ -253,8 +268,22 @@ class Block():
             y=-temp
             x=(x+self.x)/FULL_WIDTH
             y=(y+self.y)/FULL_WIDTH
-            if(y>=20 or x<0 or x>=10 or (y>=0 and grid[y][x] is not None)): return False
+            if(y>=20 or x<0 or x>=GRID_WIDTH or (y>=0 and grid[y][x] is not None)): return False
         return True 
+
+    def get_square_xys(self):
+        s = []
+        for square in self.squares:
+            x=square.x-self.x
+            y=square.y-self.y
+            temp=x
+            x=y
+            y=-temp
+            x=(x+self.x)/FULL_WIDTH
+            y=(y+self.y)/FULL_WIDTH
+            s.append((x, y))
+        return sorted(s)
+
     
 
 class Tetris():
@@ -270,7 +299,7 @@ class Tetris():
         self.grid=[]
         for i in range(20):
             self.grid.append([])
-            for j in range(10):
+            for j in range(GRID_WIDTH):
                 self.grid[i].append(None)   
         self.crnt=Block(random.randint(0,6))
         self.preview=[]
@@ -281,19 +310,19 @@ class Tetris():
         count=0
         for i in range(20):
             full=True
-            for j in range(10):
+            for j in range(GRID_WIDTH):
                 if(self.grid[i][j] is None): 
                     full=False
                     break
             if(full):
                 count+=1
-                for j in range(10):
+                for j in range(GRID_WIDTH):
                     self.grid[i][j]=None
         i=19
         j=18
         while(i>0 and j>=0):
             null=True
-            for k in range(10):
+            for k in range(GRID_WIDTH):
                 if(self.grid[i][k] is not None):
                     null=False
                     break
@@ -301,13 +330,13 @@ class Tetris():
                 j=min(i-1,j)
                 while(j>=0 and null):
                     null=True
-                    for k in range(10):
+                    for k in range(GRID_WIDTH):
                         if(self.grid[j][k] is not None):
                             null=False
                             break
                     if(null): j-=1
                 if(j<0): break
-                for k in range(10):
+                for k in range(GRID_WIDTH):
                     self.grid[i][k]=self.grid[j][k]
                     self.grid[j][k]=None
                     if(self.grid[i][k] is not None): self.grid[i][k].y=HALF_WIDTH+i*FULL_WIDTH
