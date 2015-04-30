@@ -1,6 +1,8 @@
 import random
 import tetris
 import copy
+import collections
+import numpy as np
 import sys
 from time import sleep
 import string
@@ -137,7 +139,7 @@ def evaluate_state(state, problem):
     return -1.0/1000*(72*get_height(heights) + 75*average_height(heights) + 442*get_num_holes(grid) + 56*bumpiness(heights) + 352 * valleys(grid, heights))
 
 
-def convert_state(state, hole='high',k=0,num_next=1):
+def convert_state(state, hole='count',k=0,num_next=1):
     """
     Converts a state from the internal representation
 
@@ -149,30 +151,34 @@ def convert_state(state, hole='high',k=0,num_next=1):
         num_next: The number of next pieces to look at
     """
     skyline = get_height_list(state['board'])
+    print_grid(state['board'])
     holes = []
-    for col in skyline:
+    for col in range(GRID_WIDTH):
+        #print ([1 if not state ['board'][x][col] else 0 for x in range(skyline[col])])
         if hole == 'count':
-            col_holes = sum([1 for x in range(col) if not state['board'][x][col]])
+            col_holes = sum([1 for x in range(GRID_HEIGHT-1,GRID_HEIGHT-1-skyline[col],-1) if not state['board'][x][col]])
             holes.append(col_holes)
         elif hole == 'high':
             highest_hole = -1
-            for i in range(col,-1,-1):
+            for i in range(col-1,-1,-1):
+#               print range(col-1,-1,-1)
                 if not state['board'][i][col]:
                     highest_hole = i
                     continue
             holes.append(highest_hole)
         else: 
             raise Exception
-        
-    converted = {}
-    converted['skyline'] = [max(0,col-k) for k in skyline]
-    converted['holes'] = holes
-    converted['next'] = state['pieces'][:num_next]
-    return converted
+    print holes
+    print skyline    
+    converted = []
+    converted.append(tuple([max(0,col-k) for k in skyline]))
+    converted.append(tuple(holes))
+    converted.append(tuple(state['pieces'][:num_next]))
+    return tuple(converted)
 
 
-class TetrisAgent()
-    def __init__(self, gamma=0.95, epsilon, alpha):
+class TetrisAgent():
+    def __init__(self, epsilon, alpha, gamma=0.95):
         self.gamma = gamma
         self.epsilon_func = epsilon
         self.alpha_func = alpha
@@ -190,12 +196,11 @@ class TetrisAgent()
 
     def interact(self, reward, next_state, problem):
         # Handle start of episode
-        actions = problem.get_possible_actions(next_state)
+        actions = problem.get_possible_actions()
         if reward is None:
             self.last_state = next_state
             self.last_action = random.choice(actions)
             return self.last_action
-
         if not self.value_table.get(next_state):
             self.value_table[next_state] = collections.defaultdict(float)
         if not self.value_table.get(self.last_state):
@@ -274,7 +279,7 @@ class TetrisLearningProblem():
         new_board = self.preview_action(action)
         if new_board is None:
             self.gameover = True
-            return LOSS_REWARD, convert_state(self._get_internal_state)
+            return LOSS_REWARD, self._get_internal_state()
 
         # Compute the number of lines cleared
         lines_cleared = clear_lines(new_board)  # Side effecting
@@ -289,7 +294,7 @@ class TetrisLearningProblem():
         # Update internal state
         self.board = new_board
         self.pieces = self.pieces[1:]
-        return reward, self._get_internal_state
+        return reward, self._get_internal_state()
 
     def preview_action(self, action):
         """
@@ -403,69 +408,24 @@ class TetrisLearningProblem():
         return 1  # TODO
 
 
-def test_tetris(ntrial=10, nepisodes=50, niter=100, lookahead=1, heuristic=None, watchGames=False, verbose=False):
+def test_tetris(ntrial=10, nepisodes=50, niter=100):
     """
     Test harness
     """
-
-    if lookahead < 1:
-        print "Bad Lookahead! Please pick 1 for no lookahead, 2 for 1-piece, etc..."
-        return
-    else:
-        print "Lookahead: " + str(lookahead - 1) + " pieces"
-    if verbose:
-        print "Verbose Printing Enabled"
-    else:
-        print "Verbose Printing Disabled"
-    if watchGames:
-        print "Game Replay Enabled"
-    else:
-        print "Game Replay Disabled"
-
-    total_lines = []
-    problem = TetrisLearningProblem(lookahead=lookahead,verbose=verbose)
-    agent = TetrisAgent(epsilon=lambda x: 0.02,alpha=lambda x: 1./x)
+    problem = TetrisLearningProblem()
+    agent = TetrisAgent(epsilon=lambda x: 0.02, alpha=lambda x: 1./x)
     for n in range(ntrial):
         problem.reset()
         agent.reset()
-        for e in range(nepisode):
+        for e in range(nepisodes):
             problem.reset()
-            state = convert_state(_get_internal_state())
+            state = convert_state(problem._get_internal_state())
             reward = None
             for i in range(niter):
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
                 state = convert_state(state)
 
-            print current_node
-            game_replay, goal_node = None, None
- 
-            if watchGames:
-                for grid in game_replay:
-                    print_grid(grid)
-                    sleep(0.2)
-                sleep(2)
-
-            lines_cleared = 0
-            for j in range(len(game_replay)-1):
-                before = max(get_height_list(game_replay[j]))
-                after = max(get_height_list(game_replay[j+1]))
-                if after < before:
-                    lines_cleared += before - after
-
-            print "Lines cleared: " + str(lines_cleared)
-
-            with open('gameLogs/trial_3'+str(i)+'_linesCleared='+str(lines_cleared)+'.txt', 'w') as fout:
-                for g in game_replay:
-                    fout.write(str(g))
-                    fout.write('\n')
-            break
-            #return # TODO: remove once we have a real goal state
-
-        total_lines.append(lines_cleared)
-
-    print "Lines by Game: " + str(total_lines)
-    print "Total Lines: " + str(sum(total_lines)) + " in " + str(ntrial) + " games."
 
 def clear_lines(grid):
   """
@@ -514,47 +474,9 @@ def clear_lines(grid):
   
   return count
 
-def watchReplay(filename):
-    with open(filename) as f:
-        for line in f:
-            parsed = string.replace(line, ',', '')
-            parsed = string.replace(parsed, 'None', '.')
-            parsed = string.lstrip(parsed, '[[')
-            parsed = string.rstrip(parsed, ']]\n')
-            
-            parselist = string.split(parsed, '] [')
-            for p in parselist:
-                print p
-            sleep(0.5)
-
-def printHelp():
-    print "Usage: python algo.py [OPTIONS]"
-    print "\t-h, --help\tPrints this help dialog"
-    print "\t-t, --tetris\tRuns the tetris AI simulation"
-    print "\t\t ARGS: [# trials] [lookahead = 1,2,...] [watch replay=0,1] [verbose=0,1]"
-    print "\t-r, --replay\tWatch a game replay"
-    print "\t\t ARGS: [gamelog]"
-    # print "\t-d, --demo\tWatch the class demo"
 
 def main():
-    return  # TODO: remove
-
-    if len(sys.argv) < 2:
-        printHelp()
-        return
-
-    # HELP
-    if len(sys.argv) == 2 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
-        printHelp()
-        return
-
-    # REPLAY MODE
-    if len(sys.argv) == 3 and (sys.argv[1] == "-r" or sys.argv[1] == "--replay"):
-        watchReplay(sys.argv[2])
-
-    # AI SIMULATION
-    if len(sys.argv) == 6 and (sys.argv[1] == "-t" or sys.argv[1] == "--tetris"):
-        test_tetris(ntrial=int(sys.argv[2]), lookahead=int(sys.argv[3]), watchGames=int(sys.argv[4]), verbose=int(sys.argv[5]))
+    test_tetris()
 
 
 if __name__ == '__main__':
