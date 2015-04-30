@@ -13,7 +13,7 @@ demo = True
 TESTMODE = True
 
 GRID_HEIGHT = 20
-GRID_WIDTH = 10
+GRID_WIDTH = 6
 
 def print_grid(grid, block=None):
     """
@@ -448,19 +448,19 @@ def clear_lines(grid):
   count=0
   for i in range(20):
       full=True
-      for j in range(10):
+      for j in range(GRID_WIDTH):
           if(grid[i][j] is None): 
               full=False
               break
       if(full):
           count+=1
-          for j in range(10):
+          for j in range(GRID_WIDTH):
               grid[i][j]=None
   i=19
   j=18
   while(i>0 and j>=0):
       null=True
-      for k in range(10):
+      for k in range(GRID_WIDTH):
           if(grid[i][k] is not None):
               null=False
               break
@@ -468,13 +468,13 @@ def clear_lines(grid):
           j=min(i-1,j)
           while(j>=0 and null):
               null=True
-              for k in range(10):
+              for k in range(GRID_WIDTH):
                   if(grid[j][k] is not None):
                       null=False
                       break
               if(null): j-=1
           if(j<0): break
-          for k in range(10):
+          for k in range(GRID_WIDTH):
               grid[i][k]=grid[j][k]
               grid[j][k]=None
               if(grid[i][k] is not None): grid[i][k].y=tetris.HALF_WIDTH+i*tetris.FULL_WIDTH
