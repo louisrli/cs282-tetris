@@ -247,7 +247,7 @@ class TetrisAgent():
         self.iteration = 1
 
     def interact(self, reward, next_state, problem):
-        print "Size of state space: ", self._get_num_keys()
+        #print "Size of state space: ", self._get_num_keys()
         # Handle start of episode
         actions = problem.get_possible_actions()
         random.shuffle(actions)
@@ -286,7 +286,7 @@ class TetrisAgent():
 
 
 class TetrisLearningProblem():
-    def __init__(self, gamma=0.95, verbose=False):
+    def __init__(self, gamma=0.98, verbose=False):
         self.verbose = verbose
 
         # Initialized by reset()
@@ -304,7 +304,7 @@ class TetrisLearningProblem():
         self.gameover = False
 
         # Generate random sequence of pieces for offline tetris
-        NUM_PIECES = 10000
+        NUM_PIECES = 1000
         self.pieces = [random.choice(tetris.SHAPES) for i in xrange(NUM_PIECES)]
 
         # Set up an empty board
@@ -334,7 +334,7 @@ class TetrisLearningProblem():
 
         This should be the only way to mutate the internal state.
         """
-        LOSS_REWARD = -10000
+        LOSS_REWARD = -100
         new_board = self.preview_action(action)
         if new_board is None:
             self.gameover = True
@@ -348,7 +348,7 @@ class TetrisLearningProblem():
         num_holes = get_num_holes(new_board)
 
         line_clear_reward = 0 if (lines_cleared == 0) else 2**(lines_cleared - 1)
-        reward = line_clear_reward - 10*num_holes
+        reward = line_clear_reward - num_holes
         #reward = evaluate_state(self._get_internal_state())
 
         # Update internal state
@@ -478,7 +478,6 @@ def test_tetris(ntrials=1, nepisodes=1000, niter=100):
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
                 state = convert_state(state, k=17)
-                print "iterations before losing:", i
                 rewards.append(reward)
             reward_mat[n][e] = sum(rewards)
         fig = plt.figure()
