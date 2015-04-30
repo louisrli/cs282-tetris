@@ -247,7 +247,6 @@ class TetrisAgent():
         self.iteration = 1
 
     def interact(self, reward, next_state, problem):
-        print "Size of state space: ", self._get_num_keys()
         # Handle start of episode
         actions = problem.get_possible_actions()
         random.shuffle(actions)
@@ -478,7 +477,6 @@ def test_tetris(ntrials=1, nepisodes=1000, niter=100):
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
                 state = convert_state(state, k=17)
-                print "iterations before losing:", i
                 rewards.append(reward)
             reward_mat[n][e] = sum(rewards)
         fig = plt.figure()
