@@ -129,17 +129,6 @@ def get_lines_cleared(gnew, gold):
     return
 
 
-""" EVALUATION FUNCTION """
-def evaluate_state(state, problem):
-    """
-    Heuristic / scoring function for state
-    """
-    grid = state["board"]
-    heights = get_height_list(grid)
-    #return -(10*get_num_holes(grid) + 2**(get_height(heights)) + bumpiness(heights) + average_height(heights))
-    return -1.0/1000*(72*get_height(heights) + 75*average_height(heights) + 442*get_num_holes(grid) + 56*bumpiness(heights) + 352 * valleys(grid, heights))
-
-
 def convert_state(state, hole='count',k=0,num_next=1):
     """
     Converts a state from the internal representation
@@ -236,7 +225,7 @@ class TetrisLearningProblem():
         self.gameover = False
 
         # Generate random sequence of pieces for offline tetris
-        NUM_PIECES = 100
+        NUM_PIECES = 10000
         self.pieces = [random.choice(tetris.SHAPES) for i in xrange(NUM_PIECES)]
 
         # Set up an empty board
@@ -421,10 +410,11 @@ def test_tetris(ntrial=10, nepisodes=50, niter=100):
             for i in range(niter):
                 if problem.is_terminal():
                     break
-                print_grid(problem._get_internal_state()['board'])
+                # print_grid(problem._get_internal_state()['board'])
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
                 state = convert_state(state)
+            print "iterations before losing:", i
 
 
 def clear_lines(grid):
