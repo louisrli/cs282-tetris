@@ -1,4 +1,5 @@
 import random
+
 import tetris
 import copy
 import collections
@@ -151,25 +152,20 @@ def convert_state(state, hole='count',k=0,num_next=1):
         num_next: The number of next pieces to look at
     """
     skyline = get_height_list(state['board'])
-    print_grid(state['board'])
     holes = []
     for col in range(GRID_WIDTH):
-        #print ([1 if not state ['board'][x][col] else 0 for x in range(skyline[col])])
         if hole == 'count':
             col_holes = sum([1 for x in range(GRID_HEIGHT-1,GRID_HEIGHT-1-skyline[col],-1) if not state['board'][x][col]])
             holes.append(col_holes)
         elif hole == 'high':
             highest_hole = -1
             for i in range(col-1,-1,-1):
-#               print range(col-1,-1,-1)
                 if not state['board'][i][col]:
                     highest_hole = i
                     continue
             holes.append(highest_hole)
         else: 
             raise Exception
-    print holes
-    print skyline    
     converted = []
     converted.append(tuple([max(0,col-k) for k in skyline]))
     converted.append(tuple(holes))
@@ -197,6 +193,7 @@ class TetrisAgent():
     def interact(self, reward, next_state, problem):
         # Handle start of episode
         actions = problem.get_possible_actions()
+        random.shuffle(actions)
         if reward is None:
             self.last_state = next_state
             self.last_action = random.choice(actions)
@@ -413,7 +410,7 @@ def test_tetris(ntrial=10, nepisodes=50, niter=100):
     Test harness
     """
     problem = TetrisLearningProblem()
-    agent = TetrisAgent(epsilon=lambda x: 0.02, alpha=lambda x: 1./x)
+    agent = TetrisAgent(epsilon=lambda x: 1./x, alpha=lambda x: 1./x)
     for n in range(ntrial):
         problem.reset()
         agent.reset()
@@ -422,6 +419,9 @@ def test_tetris(ntrial=10, nepisodes=50, niter=100):
             state = convert_state(problem._get_internal_state())
             reward = None
             for i in range(niter):
+                if problem.is_terminal():
+                    break
+                print_grid(problem._get_internal_state()['board'])
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
                 state = convert_state(state)
