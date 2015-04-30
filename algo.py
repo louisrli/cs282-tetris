@@ -283,8 +283,8 @@ class TetrisLearningProblem():
         # Subtract the number of holes
         num_holes = get_num_holes(new_board)
 
-        reward = 2**lines_cleared - num_holes
-
+        line_clear_reward = 0 if (lines_cleared == 0) else 2**(lines_cleared - 1)
+        reward = line_clear_reward - num_holes
 
         # Update internal state
         self.board = new_board
