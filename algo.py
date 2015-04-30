@@ -247,7 +247,6 @@ class TetrisAgent():
         self.iteration = 1
 
     def interact(self, reward, next_state, problem):
-        #print "Size of state space: ", self._get_num_keys()
         # Handle start of episode
         actions = problem.get_possible_actions()
         random.shuffle(actions)
