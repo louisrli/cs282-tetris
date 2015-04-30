@@ -133,6 +133,7 @@ class TetrisLearningProblem():
         self.alpha_func =  None   # TODO
 
         # Initialized by reset()
+        self.gameover = None
         self.board = None
         self.pieces = None
 
@@ -143,8 +144,10 @@ class TetrisLearningProblem():
         """
         Resets the tetris board to empty and re-initializes with a random set of pieces
         """
+        self.gameover = False
+
         # Generate random sequence of pieces for offline tetris
-        NUM_PIECES = 5
+        NUM_PIECES = 100
         self.pieces = [random.choice(tetris.SHAPES) for i in xrange(NUM_PIECES)]
 
         # Set up an empty board
@@ -171,7 +174,7 @@ class TetrisLearningProblem():
         """
         Returns true if the game is over: either out of pieces or lost on board
         """
-        return len(self.pieces) == 0 or len(self.get_possible_actions()) == 0
+        return len(self.pieces) == 0 or self.gameover
 
     def perform_action(self, action):
         """
@@ -180,7 +183,11 @@ class TetrisLearningProblem():
 
         This should be the only way to mutate the internal state.
         """
+        LOSS_REWARD = -10000
         new_board = self.preview_action(action)
+        if new_board is None:
+            self.gameover = True
+            return LOSS_REWARD
 
         # Compute the number of lines cleared
         lines_cleared = clear_lines(new_board)  # Side effecting
@@ -191,14 +198,11 @@ class TetrisLearningProblem():
 
         reward = 2**lines_cleared - num_holes
 
-        if debug:
-            print "Cleared lines: ", lines_cleared
-            print "Number of holes: ", num_holes
-            print "Reward: ", reward
 
         # Update internal state
         self.board = new_board
         self.pieces = self.pieces[1:]
+
         return reward
 
     def preview_action(self, action):
@@ -208,6 +212,7 @@ class TetrisLearningProblem():
 
         Returns:
             A board
+            None if placing the piece down leads to a loss
         """
         grid = copy.deepcopy(self.board)
         piece = copy.deepcopy(action)
@@ -219,12 +224,13 @@ class TetrisLearningProblem():
         try: 
             merge_grid_block(grid, piece)
         except:
-            raise Exception
+            return None
         return grid
    
     def get_possible_actions(self):
         """
-        Based on the current state, return the list of possible actions
+        Based on the current state, compute the list of possible actions
+        (memoized since this is probably expensive)
 
         For the tetris domain, this is going to be:
             (every possible rotation) x (every possible x-position)
