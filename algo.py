@@ -286,7 +286,7 @@ class TetrisLearningProblem():
         # Update internal state
         self.board = new_board
         self.pieces = self.pieces[1:]
-        return reward, convert_state(self._get_internal_state)
+        return reward, self._get_internal_state
 
     def preview_action(self, action):
         """
@@ -430,6 +430,7 @@ def test_tetris(ntrial=10, nepisodes=50, niter=100, lookahead=1, heuristic=None,
             for i in range(niter):
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
+                state = convert_state(state)
 
             print current_node
             game_replay, goal_node = None, None
