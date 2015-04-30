@@ -7,7 +7,7 @@ import numpy as np
 import sys
 from time import sleep
 import string
-
+import matplotlib.pyplot as plt
 debug = True
 demo = True
 TESTMODE = True
@@ -32,6 +32,54 @@ def print_grid(grid, block=None):
                 print ".",
         print  # Newline at the end of a row
     print
+
+def clear_lines(grid):
+  """
+  Clear lines from a grid. Mutates grid.
+  
+  Taken from tetris.py, Tetris.clear_lines()
+  
+  Returns:
+      The number of lines cleared
+  """
+  count=0
+  for i in range(GRID_HEIGHT):
+      full=True
+      for j in range(GRID_WIDTH):
+          if(grid[i][j] is None): 
+              full=False
+              break
+      if(full):
+          count+=1
+          for j in range(GRID_WIDTH):
+              grid[i][j]=None
+  i=GRID_HEIGHT-1
+  j=GRID_HEIGHT-2
+  while(i>0 and j>=0):
+      null=True
+      for k in range(GRID_WIDTH):
+          if(grid[i][k] is not None):
+              null=False
+              break
+      if(null):
+          j=min(i-1,j)
+          while(j>=0 and null):
+              null=True
+              for k in range(GRID_WIDTH):
+                  if(grid[j][k] is not None):
+                      null=False
+                      break
+              if(null): j-=1
+          if(j<0): break
+          for k in range(GRID_WIDTH):
+              grid[i][k]=grid[j][k]
+              grid[j][k]=None
+              if(grid[i][k] is not None): grid[i][k].y=tetris.HALF_WIDTH+i*tetris.FULL_WIDTH
+          j-=1
+      i-=1
+  
+  return count
+
 
 def merge_grid_block(grid, block):
     """
@@ -130,7 +178,7 @@ def get_lines_cleared(gnew, gold):
 
 
 """ EVALUATION FUNCTION """
-def evaluate_state(state, problem):
+def evaluate_state(state):
     """
     Heuristic / scoring function for state
     """
@@ -140,7 +188,7 @@ def evaluate_state(state, problem):
     return -1.0/1000*(72*get_height(heights) + 75*average_height(heights) + 442*get_num_holes(grid) + 56*bumpiness(heights) + 352 * valleys(grid, heights))
 
 
-def convert_state(state, hole='count',k=0,num_next=1):
+def convert_state(state, hole='high',k=0,num_next=1):
     """
     Converts a state from the internal representation
 
@@ -253,12 +301,6 @@ class TetrisLearningProblem():
         """
         return { "board": self.board, "pieces": self.pieces }
 
-    def observe(self):
-        """
-        Return a representation of the state for the agent to use
-        """
-        pass
-
     def is_terminal(self):
         """
         Returns true if the game is over: either out of pieces or lost on board
@@ -286,7 +328,8 @@ class TetrisLearningProblem():
         num_holes = get_num_holes(new_board)
 
         line_clear_reward = 0 if (lines_cleared == 0) else 2**(lines_cleared - 1)
-        reward = line_clear_reward - num_holes
+        reward = line_clear_reward - 10*num_holes
+        #reward = evaluate_state(self._get_internal_state())
 
         # Update internal state
         self.board = new_board
@@ -391,89 +434,38 @@ class TetrisLearningProblem():
         return rotated_pieces
 
 
-    def _get_reward(self):
-        """
-        Returns the reward for being in the current state
-        Normally, reward is r(s, a), but in our case, it only depends on the current state.
-        We'll return this value when the agent performs an action.
-
-        Arg:
-            The current state (after performing an action)
-        Returns: 
-            a numeric value
-        """
-        return 1  # TODO
-
-
-def test_tetris(ntrial=10, nepisodes=50, niter=100):
+def test_tetris(ntrials=1, nepisodes=20, niter=100):
     """
     Test harness
     """
     problem = TetrisLearningProblem()
-    agent = TetrisAgent(epsilon=lambda x: 1./x, alpha=lambda x: 1./x)
-    for n in range(ntrial):
+    agent = TetrisAgent(epsilon=lambda x: .01, alpha=lambda x: pow(.99,x))
+    reward_mat = np.zeros((ntrials,nepisodes))
+    for n in range(ntrials):
+        total_rewards = []
         problem.reset()
         agent.reset()
         for e in range(nepisodes):
+            rewards = []
             problem.reset()
-            state = convert_state(problem._get_internal_state())
+            state = convert_state(problem._get_internal_state(), k=17)
             reward = None
             for i in range(niter):
                 if problem.is_terminal():
                     break
-                print_grid(problem._get_internal_state()['board'])
+                #sleep(.5)
+                #print_grid(problem._get_internal_state()['board'])
                 action = agent.interact(reward, state, problem)
                 reward, state = problem.perform_action(action)
-                state = convert_state(state)
-
-
-def clear_lines(grid):
-  """
-  Clear lines from a grid. Mutates grid.
-  
-  Taken from tetris.py, Tetris.clear_lines()
-  
-  Returns:
-      The number of lines cleared
-  """
-  count=0
-  for i in range(20):
-      full=True
-      for j in range(10):
-          if(grid[i][j] is None): 
-              full=False
-              break
-      if(full):
-          count+=1
-          for j in range(10):
-              grid[i][j]=None
-  i=19
-  j=18
-  while(i>0 and j>=0):
-      null=True
-      for k in range(10):
-          if(grid[i][k] is not None):
-              null=False
-              break
-      if(null):
-          j=min(i-1,j)
-          while(j>=0 and null):
-              null=True
-              for k in range(10):
-                  if(grid[j][k] is not None):
-                      null=False
-                      break
-              if(null): j-=1
-          if(j<0): break
-          for k in range(10):
-              grid[i][k]=grid[j][k]
-              grid[j][k]=None
-              if(grid[i][k] is not None): grid[i][k].y=tetris.HALF_WIDTH+i*tetris.FULL_WIDTH
-          j-=1
-      i-=1
-  
-  return count
-
+                state = convert_state(state, k=17)
+                rewards.append(reward)
+            reward_mat[n][e] = sum(rewards)
+        fig = plt.figure()
+        plt.plot(np.sum(reward_mat,axis=0)/ntrials)
+        plt.xlabel('episodes')
+        plt.ylabel('cumulative rewards')
+        plt.title('cumulative rewards vs episodes')
+        plt.show()
 
 def main():
     test_tetris()
